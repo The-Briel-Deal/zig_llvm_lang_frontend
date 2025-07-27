@@ -36,42 +36,56 @@ pub const Token = union(TokenTag) {
 pub const TokenIter = struct {
     source: []const u8,
     index: u32 = 0,
+    eof: bool = false,
 
     fn init(source: []const u8) TokenIter {
         return .{ .source = source };
     }
 
     fn currChar(self: *TokenIter) u8 {
-        return self.source[self.index];
+        if (self.eof)
+            return self.source[self.index]
+        else
+            return 0x03;
     }
-    fn nextChar(self: *TokenIter) ?u8 {
-        if (self.index + 1 >= self.source.len) return null;
+    fn nextChar(self: *TokenIter) bool {
+        if (self.eof) return false;
+        if (self.index + 1 >= self.source.len) self.eof = true;
         self.index += 1;
-        return self.source[self.index];
+        return true;
     }
 
     fn nextTok(self: *TokenIter) Token {
         while (self.currChar() == ' ')
-            _ = self.nextChar() orelse return .eof;
+            if (!self.nextChar()) return .eof;
 
         if (isAlpha(self.currChar())) {
             const strStart = self.source.ptr + self.index;
             while (isAlnum(self.currChar()))
-                _ = self.nextChar() orelse break;
+                if (!self.nextChar()) break;
             const strEnd = self.source.ptr + self.index;
 
             const token: Token = .init(strStart[0 .. strEnd - strStart]);
             return token;
         }
+        if (self.currChar() == 0x03) return .eof;
         unreachable;
     }
 };
 
 test "TokenIter" {
-    var iter: TokenIter = .init("extern def foo");
+    var iter: TokenIter = .init("extern def foo bar");
     try std.testing.expect(iter.nextTok() == .@"extern");
     try std.testing.expect(iter.nextTok() == .def);
-    try std.testing.expect(iter.nextTok() == .identifier);
+
+    const fooIdentifier = iter.nextTok();
+    try std.testing.expect(fooIdentifier == .identifier);
+    try std.testing.expectEqualStrings("foo", fooIdentifier.identifier);
+
+    const barIdentifier = iter.nextTok();
+    try std.testing.expect(barIdentifier == .identifier);
+    try std.testing.expectEqualStrings("bar", barIdentifier.identifier);
+
     try std.testing.expect(iter.nextTok() == .eof);
     // eof should keep being returned at end of source
     try std.testing.expect(iter.nextTok() == .eof);
