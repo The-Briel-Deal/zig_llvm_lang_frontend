@@ -3,6 +3,9 @@ const std = @import("std");
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
+    const mod = b.createModule(.{
+        .root_source_file = b.path("src/zllf.zig"),
+    });
 
     const exe = b.addExecutable(.{
         .name = "zig_llvm_lang_frontend",
@@ -10,6 +13,9 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/main.zig"),
             .target = target,
             .optimize = optimize,
+            .imports = &.{
+                .{ .name = "zllf", .module = mod },
+            },
         }),
     });
 
@@ -25,7 +31,6 @@ pub fn build(b: *std.Build) void {
     if (b.args) |args| {
         run_cmd.addArgs(args);
     }
-
 
     const exe_tests = b.addTest(.{
         .root_module = exe.root_module,
