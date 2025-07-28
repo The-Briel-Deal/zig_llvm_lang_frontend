@@ -48,6 +48,7 @@ pub const TokenIter = struct {
         else
             return 0x03;
     }
+
     fn nextChar(self: *TokenIter) bool {
         if (self.eof) return false;
         if (self.index + 1 >= self.source.len) self.eof = true;
@@ -75,19 +76,19 @@ pub const TokenIter = struct {
 
 test "TokenIter" {
     var iter: TokenIter = .init("extern def foo bar");
-    try std.testing.expect(iter.nextTok() == .@"extern");
-    try std.testing.expect(iter.nextTok() == .def);
+    try std.testing.expectEqual(.@"extern", iter.nextTok());
+    try std.testing.expectEqual(.def, iter.nextTok());
 
     const fooIdentifier = iter.nextTok();
-    try std.testing.expect(fooIdentifier == .identifier);
-    try std.testing.expectEqualStrings("foo", fooIdentifier.identifier);
+    try std.testing.expectEqual(Token{ .identifier = "foo" }, fooIdentifier);
+    try std.testing.expectEqualStrings(fooIdentifier.identifier, "foo");
 
     const barIdentifier = iter.nextTok();
-    try std.testing.expect(barIdentifier == .identifier);
+    try std.testing.expectEqual(barIdentifier, Token{ .identifier = "bar" });
     try std.testing.expectEqualStrings("bar", barIdentifier.identifier);
 
-    try std.testing.expect(iter.nextTok() == .eof);
+    try std.testing.expectEqual(iter.nextTok(), .eof);
     // eof should keep being returned at end of source
-    try std.testing.expect(iter.nextTok() == .eof);
-    try std.testing.expect(iter.nextTok() == .eof);
+    try std.testing.expectEqual(iter.nextTok(), .eof);
+    try std.testing.expectEqual(iter.nextTok(), .eof);
 }
