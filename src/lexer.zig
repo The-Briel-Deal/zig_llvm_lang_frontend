@@ -44,9 +44,8 @@ pub const TokenIter = struct {
 
     fn currChar(self: *TokenIter) u8 {
         if (self.eof)
-            return self.source[self.index]
-        else
             return 0x03;
+        return self.source[self.index];
     }
 
     fn nextChar(self: *TokenIter) bool {
@@ -80,11 +79,13 @@ test "TokenIter" {
     try std.testing.expectEqual(.def, iter.nextTok());
 
     const fooIdentifier = iter.nextTok();
-    try std.testing.expectEqual(Token{ .identifier = "foo" }, fooIdentifier);
+    const fooTag = std.meta.activeTag(fooIdentifier);
+    try std.testing.expectEqual(TokenTag.identifier, fooTag);
     try std.testing.expectEqualStrings(fooIdentifier.identifier, "foo");
 
     const barIdentifier = iter.nextTok();
-    try std.testing.expectEqual(barIdentifier, Token{ .identifier = "bar" });
+    const barTag = std.meta.activeTag(barIdentifier);
+    try std.testing.expectEqual(TokenTag.identifier, barTag);
     try std.testing.expectEqualStrings("bar", barIdentifier.identifier);
 
     try std.testing.expectEqual(iter.nextTok(), .eof);
