@@ -6,11 +6,12 @@ pub fn main() !void {
     var stdout_writer = std.fs.File.stdout().writer(&buf);
 
     for (builtin.test_functions) |t| {
-        try stdout_writer.interface.flush();
         t.func() catch |err| {
             try stdout_writer.interface.print("{s} fail: {}\n", .{ t.name, err });
+            try stdout_writer.interface.flush();
             continue;
         };
         try stdout_writer.interface.print("{s} passed\n", .{t.name});
+        try stdout_writer.interface.flush();
     }
 }
