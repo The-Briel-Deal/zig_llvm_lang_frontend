@@ -34,11 +34,18 @@ pub fn build(b: *std.Build) void {
         run_cmd.addArgs(args);
     }
 
+    const test_runner: std.Build.Step.Compile.TestRunner = .{
+        .path = b.path("test_runner.zig"),
+        .mode = .simple,
+    };
+
     const exe_tests = b.addTest(.{
         .root_module = exe.root_module,
+        .test_runner = test_runner,
     });
     const zllf_tests = b.addTest(.{
         .root_module = zllf_mod,
+        .test_runner = test_runner,
     });
 
     const enable_debug_logs = b.option(bool, "enable_debug_logs", "enable debug logging") orelse false;
