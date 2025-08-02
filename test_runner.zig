@@ -13,15 +13,17 @@ pub fn main() !void {
         var buf: [64]u8 = undefined;
         var stdout_writer = std.fs.File.stdout().writer(&buf);
         t.func() catch |err| {
-            _ = stdout_writer.interface.write(BRIGHT_RED_FOREGROUND) catch return;
-            try stdout_writer.interface.print("{s} fail: {}\n", .{ t.name, err });
-            _ = stdout_writer.interface.write(DEFAULT_COLOR) catch return;
+            _ = try stdout_writer.interface.write(BRIGHT_RED_FOREGROUND);
+            _ = try stdout_writer.interface.write("[fail]");
+            _ = try stdout_writer.interface.write(DEFAULT_COLOR);
+            try stdout_writer.interface.print(" {s}: {}\n", .{ t.name, err });
             try stdout_writer.interface.flush();
             continue;
         };
-        _ = stdout_writer.interface.write(BRIGHT_GREEN_FOREGROUND) catch return;
-        try stdout_writer.interface.print("{s} passed\n", .{t.name});
-        _ = stdout_writer.interface.write(DEFAULT_COLOR) catch return;
+        _ = try stdout_writer.interface.write(BRIGHT_GREEN_FOREGROUND);
+        _ = try stdout_writer.interface.write("[pass]");
+        _ = try stdout_writer.interface.write(DEFAULT_COLOR);
+        try stdout_writer.interface.print(" {s}\n", .{t.name});
         try stdout_writer.interface.flush();
     }
 }
