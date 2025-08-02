@@ -53,6 +53,7 @@ pub fn build(b: *std.Build) void {
     const options = b.addOptions();
     options.addOption(bool, "enable_debug_logs", enable_debug_logs);
     zllf_tests.root_module.addOptions("config", options);
+    exe_tests.root_module.addOptions("config", options);
 
     const run_exe_tests = b.addRunArtifact(exe_tests);
     const run_zllf_tests = b.addRunArtifact(zllf_tests);
