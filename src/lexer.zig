@@ -3,6 +3,8 @@ const mem = std.mem;
 const isAlpha = std.ascii.isAlphabetic;
 const isAlnum = std.ascii.isAlphanumeric;
 
+const ASCII_EOT = 0x04;
+
 const TokenTag = enum(i8) {
     eof = -1,
 
@@ -23,6 +25,7 @@ pub const Token = union(TokenTag) {
     number: f64,
 
     fn init(str: []const u8) Token {
+        std.debug.print("Token.init('{s}')\n", .{str});
         if (str.len == 0)
             return .eof;
         if (mem.eql(u8, str, "def"))
@@ -33,43 +36,57 @@ pub const Token = union(TokenTag) {
     }
 };
 
+const TokenIterState = enum {
+    start,
+    startsWithAlpha,
+};
+
 pub const TokenIter = struct {
     source: []const u8,
-    index: u32 = 0,
-    eof: bool = false,
+    index: ?u32 = null,
+    state: TokenIterState = .start,
 
     fn init(source: []const u8) TokenIter {
         return .{ .source = source };
     }
 
-    fn currChar(self: *TokenIter) u8 {
-        if (self.eof)
-            return 0x03;
-        return self.source[self.index];
-    }
-
-    fn nextChar(self: *TokenIter) bool {
-        if (self.eof) return false;
-        if (self.index + 1 >= self.source.len) self.eof = true;
-        self.index += 1;
-        return true;
+    fn nextChar(self: *TokenIter) ?u8 {
+        if (self.index == null) {
+            self.index = 0;
+        } else {
+            self.index.? += 1;
+            if (self.index.? >= self.source.len) return null;
+        }
+        const char = self.source[self.index.?];
+        return char;
     }
 
     fn nextTok(self: *TokenIter) Token {
-        while (self.currChar() == ' ')
-            if (!self.nextChar()) return .eof;
-
-        if (isAlpha(self.currChar())) {
-            const strStart = self.source.ptr + self.index;
-            while (isAlnum(self.currChar()))
-                if (!self.nextChar()) break;
-            const strEnd = self.source.ptr + self.index;
-
-            const token: Token = .init(strStart[0 .. strEnd - strStart]);
-            return token;
+        var strStart: ?u32 = null;
+        self.state = .start;
+        while (true) {
+            const char = self.nextChar() orelse ASCII_EOT;
+            switch (self.state) {
+                .start => {
+                    if (char == ASCII_EOT) return .eof;
+                    if (char == ' ') continue;
+                    if (isAlpha(char)) {
+                        strStart = self.index;
+                        self.state = .startsWithAlpha;
+                        continue;
+                    }
+                },
+                .startsWithAlpha => {
+                    if (char != ASCII_EOT and isAlnum(char)) {
+                        continue;
+                    } else {
+                        const strEnd = self.index.?;
+                        const token: Token = .init(self.source[strStart.?..strEnd]);
+                        return token;
+                    }
+                },
+            }
         }
-        if (self.currChar() == 0x03) return .eof;
-        unreachable;
     }
 };
 
