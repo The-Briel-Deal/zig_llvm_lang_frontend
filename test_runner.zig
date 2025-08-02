@@ -12,4 +12,5 @@ pub fn main() !void {
         };
         try stdout_writer.interface.print("{s} passed\n", .{t.name});
     }
+    try stdout_writer.interface.flush();
 }
