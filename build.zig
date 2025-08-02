@@ -41,6 +41,12 @@ pub fn build(b: *std.Build) void {
         .root_module = zllf_mod,
     });
 
+    const enable_debug_logs = b.option(bool, "enable_debug_logs", "enable debug logging") orelse false;
+
+    const options = b.addOptions();
+    options.addOption(bool, "enable_debug_logs", enable_debug_logs);
+    zllf_tests.root_module.addOptions("config", options);
+
     const run_exe_tests = b.addRunArtifact(exe_tests);
     const run_zllf_tests = b.addRunArtifact(zllf_tests);
 

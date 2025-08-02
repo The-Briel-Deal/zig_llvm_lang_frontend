@@ -25,7 +25,7 @@ pub const Token = union(TokenTag) {
     number: f64,
 
     fn init(str: []const u8) Token {
-        std.debug.print("Token.init('{s}')\n", .{str});
+        std.log.debug("Token.init('{s}')", .{str});
         if (str.len == 0)
             return .eof;
         if (mem.eql(u8, str, "def"))
@@ -91,6 +91,11 @@ pub const TokenIter = struct {
 };
 
 test "TokenIter" {
+    const config = @import("config");
+
+    if (config.enable_debug_logs) {
+        std.testing.log_level = .debug;
+    }
     var iter: TokenIter = .init("extern def foo bar");
     try std.testing.expectEqual(.@"extern", iter.nextTok());
     try std.testing.expectEqual(.def, iter.nextTok());
