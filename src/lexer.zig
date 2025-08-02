@@ -91,11 +91,6 @@ pub const TokenIter = struct {
 };
 
 test "TokenIter" {
-    const config = @import("config");
-
-    if (config.enable_debug_logs) {
-        std.testing.log_level = .debug;
-    }
     var iter: TokenIter = .init("extern def foo bar");
     try std.testing.expectEqual(.@"extern", iter.nextTok());
     try std.testing.expectEqual(.def, iter.nextTok());
