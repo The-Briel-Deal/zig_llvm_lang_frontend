@@ -45,6 +45,7 @@ const TokenIterState = enum {
     start,
     startsWithAlpha,
     startsWithDigit,
+    commentUntilNewLine,
 };
 
 pub const TokenIter = struct {
@@ -87,6 +88,10 @@ pub const TokenIter = struct {
                             self.state = .startsWithDigit;
                             continue;
                         },
+                        '#' => {
+                            self.state = .commentUntilNewLine;
+                            continue;
+                        },
                         else => unreachable,
                     }
                 },
@@ -107,6 +112,12 @@ pub const TokenIter = struct {
                             const strEnd = self.index.?;
                             return .initNumber(self.source[strStart.?..strEnd]);
                         },
+                    }
+                },
+                .commentUntilNewLine => {
+                    switch (char) {
+                        '\n', '\r', ASCII_EOT => self.state = .start,
+                        else => continue,
                     }
                 },
             }
@@ -152,6 +163,29 @@ test "TokenIter with numbers" {
     const barTag = std.meta.activeTag(barIdentifier);
     try std.testing.expectEqual(TokenTag.identifier, barTag);
     try std.testing.expectEqualStrings("bar", barIdentifier.identifier);
+
+    try std.testing.expectEqual(try iter.nextTok(), .eof);
+    // eof should keep being returned at end of source
+    try std.testing.expectEqual(try iter.nextTok(), .eof);
+    try std.testing.expectEqual(try iter.nextTok(), .eof);
+}
+
+test "TokenIter with comments" {
+    const src =
+        \\extern def # I love greasy dogs
+        \\def foo # bar
+    ;
+    var iter: TokenIter = .init(src);
+    try std.testing.expectEqual(.@"extern", try iter.nextTok());
+
+    try std.testing.expectEqual(.def, try iter.nextTok());
+
+    try std.testing.expectEqual(.def, try iter.nextTok());
+
+    const fooIdentifier = try iter.nextTok();
+    const fooTag = std.meta.activeTag(fooIdentifier);
+    try std.testing.expectEqual(TokenTag.identifier, fooTag);
+    try std.testing.expectEqualStrings(fooIdentifier.identifier, "foo");
 
     try std.testing.expectEqual(try iter.nextTok(), .eof);
     // eof should keep being returned at end of source
