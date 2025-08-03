@@ -5,24 +5,38 @@ const isAlnum = std.ascii.isAlphanumeric;
 
 const ASCII_EOT = 0x04;
 
-const TokenTag = enum(i8) {
-    eof = -1,
+const TokenTag = enum {
+    eof,
+    def,
+    @"extern",
+    identifier,
+    number,
 
-    def = -2,
-    @"extern" = -3,
-
-    identifier = -4,
-    number = -5,
+    /// Operators
+    add,
+    subtract,
+    equal,
+    equal_equal,
+    bang_equal,
+    less,
+    greater,
 };
 
 pub const Token = union(TokenTag) {
     eof: void,
-
     def: void,
     @"extern": void,
-
     identifier: []const u8,
     number: f64,
+
+    /// Operators
+    add: void,
+    subtract: void,
+    equal: void,
+    equal_equal: void,
+    bang_equal: void,
+    less: void,
+    greater: void,
 
     fn initIdentifier(str: []const u8) Token {
         std.log.debug("Token.initIdentifier('{s}')", .{str});
@@ -39,12 +53,35 @@ pub const Token = union(TokenTag) {
         std.log.debug("Token.initNumber('{s}')", .{str});
         return .{ .number = try std.fmt.parseFloat(f64, str) };
     }
+
+    const InitOperatorError = error{UnknownOperator};
+
+    fn initOperator(str: []const u8) InitOperatorError!Token {
+        std.log.debug("Token.initOperator('{s}')", .{str});
+        switch (str[0]) {
+            '+' => return .add,
+            '-' => return .subtract,
+            '=' => {
+                if (str.len == 1) return .equal;
+                if (str.len == 2 and str[1] == '=') return .equal_equal;
+                return InitOperatorError.UnknownOperator;
+            },
+            '!' => {
+                if (str.len == 2 and str[1] == '=') return .bang_equal;
+                return InitOperatorError.UnknownOperator;
+            },
+            '>' => return .greater,
+            '<' => return .less,
+            else => return InitOperatorError.UnknownOperator,
+        }
+    }
 };
 
 const TokenIterState = enum {
     start,
     startsWithAlpha,
     startsWithDigit,
+    startsWithOperator,
     commentUntilNewLine,
 };
 
@@ -92,6 +129,11 @@ pub const TokenIter = struct {
                             self.state = .commentUntilNewLine;
                             continue;
                         },
+                        '+', '-', '=', '!', '<', '>' => {
+                            strStart = self.index;
+                            self.state = .startsWithOperator;
+                            continue;
+                        },
                         else => unreachable,
                     }
                 },
@@ -112,6 +154,14 @@ pub const TokenIter = struct {
                             const strEnd = self.index.?;
                             return .initNumber(self.source[strStart.?..strEnd]);
                         },
+                    }
+                },
+                .startsWithOperator => {
+                    switch (char) {
+                        '=' => {
+                            return Token.initOperator(self.source[strStart.? .. self.index.? + 1]);
+                        },
+                        else => return .initOperator(self.source[strStart.? .. strStart.? + 1]),
                     }
                 },
                 .commentUntilNewLine => {
@@ -187,8 +237,18 @@ test "TokenIter with comments" {
     try std.testing.expectEqual(TokenTag.identifier, fooTag);
     try std.testing.expectEqualStrings(fooIdentifier.identifier, "foo");
 
-    try std.testing.expectEqual(try iter.nextTok(), .eof);
+    try std.testing.expectEqual(.eof, try iter.nextTok());
     // eof should keep being returned at end of source
-    try std.testing.expectEqual(try iter.nextTok(), .eof);
-    try std.testing.expectEqual(try iter.nextTok(), .eof);
+    try std.testing.expectEqual(.eof, try iter.nextTok());
+    try std.testing.expectEqual(.eof, try iter.nextTok());
+}
+
+test "TokenIter with operators" {
+    const src = "1.2 < 3.4";
+    var iter: TokenIter = .init(src);
+
+    try std.testing.expectEqual(Token{ .number = 1.2 }, try iter.nextTok());
+    try std.testing.expectEqual(.less, try iter.nextTok());
+    try std.testing.expectEqual(Token{ .number = 3.4 }, try iter.nextTok());
+    try std.testing.expectEqual(.eof, try iter.nextTok());
 }
