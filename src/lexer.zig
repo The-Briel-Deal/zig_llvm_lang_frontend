@@ -24,8 +24,8 @@ pub const Token = union(TokenTag) {
     identifier: []const u8,
     number: f64,
 
-    fn init(str: []const u8) Token {
-        std.log.debug("Token.init('{s}')", .{str});
+    fn initIdentifier(str: []const u8) Token {
+        std.log.debug("Token.initIdentifier('{s}')", .{str});
         if (str.len == 0)
             return .eof;
         if (mem.eql(u8, str, "def"))
@@ -34,11 +34,17 @@ pub const Token = union(TokenTag) {
             return .@"extern";
         return .{ .identifier = str };
     }
+
+    fn initNumber(str: []const u8) !Token {
+        std.log.debug("Token.initNumber('{s}')", .{str});
+        return .{ .number = try std.fmt.parseFloat(f64, str) };
+    }
 };
 
 const TokenIterState = enum {
     start,
     startsWithAlpha,
+    startsWithDigit,
 };
 
 pub const TokenIter = struct {
@@ -61,19 +67,27 @@ pub const TokenIter = struct {
         return char;
     }
 
-    fn nextTok(self: *TokenIter) Token {
+    fn nextTok(self: *TokenIter) !Token {
         var strStart: ?u32 = null;
         self.state = .start;
         while (true) {
             const char = self.nextChar() orelse ASCII_EOT;
             switch (self.state) {
                 .start => {
-                    if (char == ASCII_EOT) return .eof;
-                    if (char == ' ') continue;
-                    if (isAlpha(char)) {
-                        strStart = self.index;
-                        self.state = .startsWithAlpha;
-                        continue;
+                    switch (char) {
+                        ASCII_EOT => return .eof,
+                        ' ' => continue,
+                        'A'...'Z', 'a'...'z' => {
+                            strStart = self.index;
+                            self.state = .startsWithAlpha;
+                            continue;
+                        },
+                        '0'...'9' => {
+                            strStart = self.index;
+                            self.state = .startsWithDigit;
+                            continue;
+                        },
+                        else => unreachable,
                     }
                 },
                 .startsWithAlpha => {
@@ -81,8 +95,18 @@ pub const TokenIter = struct {
                         continue;
                     } else {
                         const strEnd = self.index.?;
-                        const token: Token = .init(self.source[strStart.?..strEnd]);
+                        const token: Token = .initIdentifier(self.source[strStart.?..strEnd]);
                         return token;
+                    }
+                },
+                .startsWithDigit => {
+                    switch (char) {
+                        '0'...'9' => continue,
+                        '.' => continue,
+                        else => {
+                            const strEnd = self.index.?;
+                            return .initNumber(self.source[strStart.?..strEnd]);
+                        },
                     }
                 },
             }
@@ -92,21 +116,45 @@ pub const TokenIter = struct {
 
 test "TokenIter" {
     var iter: TokenIter = .init("extern def foo bar");
-    try std.testing.expectEqual(.@"extern", iter.nextTok());
-    try std.testing.expectEqual(.def, iter.nextTok());
+    try std.testing.expectEqual(.@"extern", try iter.nextTok());
+    try std.testing.expectEqual(.def, try iter.nextTok());
 
-    const fooIdentifier = iter.nextTok();
+    const fooIdentifier = try iter.nextTok();
     const fooTag = std.meta.activeTag(fooIdentifier);
     try std.testing.expectEqual(TokenTag.identifier, fooTag);
     try std.testing.expectEqualStrings(fooIdentifier.identifier, "foo");
 
-    const barIdentifier = iter.nextTok();
+    const barIdentifier = try iter.nextTok();
     const barTag = std.meta.activeTag(barIdentifier);
     try std.testing.expectEqual(TokenTag.identifier, barTag);
     try std.testing.expectEqualStrings("bar", barIdentifier.identifier);
 
-    try std.testing.expectEqual(iter.nextTok(), .eof);
+    try std.testing.expectEqual(try iter.nextTok(), .eof);
     // eof should keep being returned at end of source
-    try std.testing.expectEqual(iter.nextTok(), .eof);
-    try std.testing.expectEqual(iter.nextTok(), .eof);
+    try std.testing.expectEqual(try iter.nextTok(), .eof);
+    try std.testing.expectEqual(try iter.nextTok(), .eof);
+}
+
+test "TokenIter with numbers" {
+    var iter: TokenIter = .init("extern 16 def foo bar");
+    try std.testing.expectEqual(.@"extern", try iter.nextTok());
+
+    try std.testing.expectEqual(Token{ .number = 16 }, try iter.nextTok());
+
+    try std.testing.expectEqual(.def, try iter.nextTok());
+
+    const fooIdentifier = try iter.nextTok();
+    const fooTag = std.meta.activeTag(fooIdentifier);
+    try std.testing.expectEqual(TokenTag.identifier, fooTag);
+    try std.testing.expectEqualStrings(fooIdentifier.identifier, "foo");
+
+    const barIdentifier = try iter.nextTok();
+    const barTag = std.meta.activeTag(barIdentifier);
+    try std.testing.expectEqual(TokenTag.identifier, barTag);
+    try std.testing.expectEqualStrings("bar", barIdentifier.identifier);
+
+    try std.testing.expectEqual(try iter.nextTok(), .eof);
+    // eof should keep being returned at end of source
+    try std.testing.expectEqual(try iter.nextTok(), .eof);
+    try std.testing.expectEqual(try iter.nextTok(), .eof);
 }
