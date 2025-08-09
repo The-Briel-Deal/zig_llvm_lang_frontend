@@ -90,7 +90,7 @@ pub const TokenIter = struct {
     index: ?u32 = null,
     state: TokenIterState = .start,
 
-    fn init(source: []const u8) TokenIter {
+    pub fn init(source: []const u8) TokenIter {
         return .{ .source = source };
     }
 
@@ -105,7 +105,7 @@ pub const TokenIter = struct {
         return char;
     }
 
-    fn nextTok(self: *TokenIter) !Token {
+    pub fn nextTok(self: *TokenIter) !Token {
         var strStart: ?u32 = null;
         self.state = .start;
         while (true) {

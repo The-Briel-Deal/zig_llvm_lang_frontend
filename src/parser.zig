@@ -14,13 +14,13 @@ const Parser = struct {
         return self.curr;
     }
 
-    fn init(source: []u8) Parser {
+    pub fn init(source: []const u8) Parser {
         return .{ .iter = .init(source) };
     }
 };
 
 test "Parser.next()" {
-    const parser = Parser.init("foo = 42");
+    var parser = Parser.init("foo = 42");
 
     const tok = parser.next();
     try std.testing.expectEqual(tok.identifier, "foo");
