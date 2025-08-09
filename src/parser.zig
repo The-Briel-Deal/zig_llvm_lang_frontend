@@ -9,7 +9,7 @@ const Parser = struct {
     curr: lexer.Token = undefined,
     iter: lexer.TokenIter,
 
-    fn next(self: Parser) lexer.Token {
+    fn next(self: *Parser) !lexer.Token {
         self.curr = try self.iter.nextTok();
         return self.curr;
     }
@@ -22,6 +22,19 @@ const Parser = struct {
 test "Parser.next()" {
     var parser = Parser.init("foo = 42");
 
-    const tok = parser.next();
-    try std.testing.expectEqual(tok.identifier, "foo");
+    var tok = try parser.next();
+    try std.testing.expectEqual(lexer.Token.identifier, std.meta.activeTag(tok));
+    try std.testing.expectEqualStrings("foo", tok.identifier);
+    try std.testing.expectEqual(tok, parser.curr);
+
+    tok = try parser.next();
+
+    try std.testing.expectEqual(lexer.Token.equal, std.meta.activeTag(tok));
+    try std.testing.expectEqual(tok, parser.curr);
+
+    tok = try parser.next();
+
+    try std.testing.expectEqual(lexer.Token.number, std.meta.activeTag(tok));
+    try std.testing.expectEqual(42, tok.number);
+    try std.testing.expectEqual(tok, parser.curr);
 }
