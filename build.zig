@@ -8,6 +8,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    zllf_mod.addImport("zllf", zllf_mod);
 
     const exe = b.addExecutable(.{
         .name = "zig_llvm_lang_frontend",
