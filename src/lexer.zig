@@ -22,6 +22,7 @@ pub const TokenTag = enum {
     greater,
     open_paren,
     close_paren,
+    comma,
 };
 
 pub const Token = union(TokenTag) {
@@ -41,6 +42,7 @@ pub const Token = union(TokenTag) {
     greater: void,
     open_paren: void,
     close_paren: void,
+    comma: void,
 
     fn initIdentifier(str: []const u8) Token {
         std.log.debug("Token.initIdentifier('{s}')", .{str});
@@ -78,6 +80,9 @@ pub const Token = union(TokenTag) {
             '<' => return .less,
             else => return InitOperatorError.UnknownOperator,
         }
+    }
+    pub fn tag(self: *const Token) TokenTag {
+        return std.meta.activeTag(self.*);
     }
 };
 

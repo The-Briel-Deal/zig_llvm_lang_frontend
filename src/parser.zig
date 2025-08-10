@@ -41,20 +41,47 @@ const Parser = struct {
     const ParseParenError = error{MissingClosingParen};
     fn parseParenExpr(self: *Parser) ParseParenError!*ExprAST {
         // Consume '('
-        assert(std.meta.activeTag(self.curr) == TokenTag.open_paren);
+        assert(self.curr.tag() == TokenTag.open_paren);
         _ = try self.next();
         const expr: *ExprAST = try self.parseExpr();
 
-        if (std.meta.activeTag(self.curr) != TokenTag.close_paren) {
+        if (self.curr.tag() != TokenTag.close_paren) {
             return error.MissingClosingParen;
         }
         _ = try self.next();
         return expr;
     }
 
-    fn ParseIdentifierExpr(self: *Parser) *ExprAST {
-        _ = self;
-        unreachable;
+    const ParseIdentError = error{UnexpectedArgListToken} || AllocError;
+    fn ParseIdentifierExpr(self: *Parser) ParseIdentError!*ExprAST {
+        assert(self.curr.tag() == TokenTag.identifier);
+        const name = self.curr.identifier;
+        _ = try self.next(); // Consume identifier
+
+        switch (self.curr) {
+            .open_paren => {
+                _ = try self.next(); // Consume '('
+                var args: std.ArrayList([]u8) = .init(self.allocator);
+                while (true) {
+                    const arg = try self.parseExpr();
+                    try args.append(arg);
+
+                    if (self.curr.tag() == TokenTag.close_paren)
+                        break;
+                    if (self.curr.tag() == TokenTag.comma) {
+                        _ = try self.next();
+                        continue;
+                    }
+                    return error.UnexpectedArgListToken;
+                }
+            },
+            else => {
+                return ExprAST.create(
+                    &self.allocator,
+                    .{ .variable = .init(name) },
+                );
+            },
+        }
     }
 
     fn next(self: *Parser) TokenIter.Error!Token {
@@ -75,18 +102,18 @@ test "Parser.next()" {
     var parser = Parser.init(dbg_allocator.allocator(), "foo = 42");
 
     var tok = try parser.next();
-    try std.testing.expectEqual(Token.identifier, std.meta.activeTag(tok));
+    try std.testing.expectEqual(Token.identifier, tok.tag());
     try std.testing.expectEqualStrings("foo", tok.identifier);
     try std.testing.expectEqual(tok, parser.curr);
 
     tok = try parser.next();
 
-    try std.testing.expectEqual(Token.equal, std.meta.activeTag(tok));
+    try std.testing.expectEqual(Token.equal, tok.tag());
     try std.testing.expectEqual(tok, parser.curr);
 
     tok = try parser.next();
 
-    try std.testing.expectEqual(Token.number, std.meta.activeTag(tok));
+    try std.testing.expectEqual(Token.number, tok.tag());
     try std.testing.expectEqual(42, tok.number);
     try std.testing.expectEqual(tok, parser.curr);
 }
@@ -104,7 +131,7 @@ test "Parser.parseNumber()" {
 
     const tok = try parser.next();
 
-    try std.testing.expectEqual(Token.number, std.meta.activeTag(tok));
+    try std.testing.expectEqual(Token.number, tok.tag());
     try std.testing.expectEqual(42, tok.number);
     try std.testing.expectEqual(tok, parser.curr);
     const ast_expr = try parser.parseNumber();
