@@ -49,7 +49,7 @@ pub const Token = union(TokenTag) {
         return .{ .identifier = str };
     }
 
-    fn initNumber(str: []const u8) !Token {
+    fn initNumber(str: []const u8) std.fmt.ParseFloatError!Token {
         std.log.debug("Token.initNumber('{s}')", .{str});
         return .{ .number = try std.fmt.parseFloat(f64, str) };
     }
@@ -105,7 +105,8 @@ pub const TokenIter = struct {
         return char;
     }
 
-    pub fn nextTok(self: *TokenIter) !Token {
+    pub const TokenIterError = (std.fmt.ParseFloatError || Token.InitOperatorError);
+    pub fn nextTok(self: *TokenIter) TokenIterError!Token {
         var strStart: ?u32 = null;
         self.state = .start;
         while (true) {
