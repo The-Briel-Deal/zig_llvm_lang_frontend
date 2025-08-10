@@ -8,6 +8,13 @@ pub const ExprAST = struct {
         call,
     };
 
+    pub fn create(allocator: *std.mem.Allocator, expr_type: Type) *ExprAST {
+        var expr = try allocator.create(ExprAST);
+        expr.type = expr_type;
+
+        return expr;
+    }
+
     pub const NumberExprAST = struct {
         val: f64,
 

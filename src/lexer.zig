@@ -5,7 +5,7 @@ const isAlnum = std.ascii.isAlphanumeric;
 
 const ASCII_EOT = 0x04;
 
-const TokenTag = enum {
+pub const TokenTag = enum {
     eof,
     def,
     @"extern",
@@ -20,6 +20,8 @@ const TokenTag = enum {
     bang_equal,
     less,
     greater,
+    open_paren,
+    close_paren,
 };
 
 pub const Token = union(TokenTag) {

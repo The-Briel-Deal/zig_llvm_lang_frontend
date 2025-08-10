@@ -1,8 +1,12 @@
 const std = @import("std");
+const mem = std.mem;
+const assert = std.debug.assert;
+
 const zllf = @import("zllf");
 
 const lexer = zllf.lexer;
 const Token = lexer.Token;
+const TokenTag = lexer.TokenTag;
 const TokenIter = lexer.TokenIter;
 
 const ast = zllf.ast;
@@ -12,24 +16,49 @@ const Parser = struct {
     // This is undefined until next is called the first time.
     curr: Token = undefined,
     iter: TokenIter,
+    allocator: mem.Allocator,
+
+    const ParseExprError = ParseNumberError || ParseParenError;
+    fn parseExpr(self: *Parser) ParseExprError!ExprAST {
+        unreachable;
+    }
 
     const ParseNumberError = error{WrongTokenType} || TokenIter.TokenIterError;
     fn parseNumber(self: *Parser) ParseNumberError!ExprAST {
-        const result = switch (self.curr) {
+        const result = try switch (self.curr) {
             .number => |val| ExprAST.NumberExprAST.init(val),
-            else => ParseNumberError.WrongTokenType,
+            else => error.WrongTokenType,
         };
         _ = try self.next();
         return result;
     }
+
+    const ParseParenError = error{MissingClosingParen};
+    fn parseParenExpr(self: *Parser) ParseParenError!ExprAST {
+        // Consume '('
+        assert(std.meta.activeTag(self.curr) == TokenTag.open_paren);
+        _ = try self.next();
+        const expr: ExprAST = try self.parseExpr();
+
+        if (std.meta.activeTag(self.curr) != TokenTag.close_paren) {
+            return error.MissingClosingParen;
+        }
+        _ = try self.next();
+        return expr;
+    }
+
+    fn ParseIdentifierExpr(self: *Parser) ExprAST {}
 
     fn next(self: *Parser) TokenIter.TokenIterError!Token {
         self.curr = try self.iter.nextTok();
         return self.curr;
     }
 
-    pub fn init(source: []const u8) Parser {
-        return .{ .iter = .init(source) };
+    pub fn init(source: []const u8, allocator: mem.Allocator) Parser {
+        return .{
+            .iter = .init(source),
+            .allocator = allocator,
+        };
     }
 };
 
