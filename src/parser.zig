@@ -74,6 +74,10 @@ const Parser = struct {
                     }
                     return error.UnexpectedArgListToken;
                 }
+                // Consume ')'
+                assert(self.curr == TokenTag.close_paren);
+                _ = try self.next();
+                return ExprAST.create(&self.allocator, .{ .call = .init(name, args.items) });
             },
             else => {
                 return ExprAST.create(
