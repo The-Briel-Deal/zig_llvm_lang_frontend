@@ -20,13 +20,17 @@ const Parser = struct {
 
     const ParseExprError = ParseNumberError || ParseParenError;
     fn parseExpr(self: *Parser) ParseExprError!ExprAST {
+        _ = self;
         unreachable;
     }
 
-    const ParseNumberError = error{WrongTokenType} || TokenIter.TokenIterError;
-    fn parseNumber(self: *Parser) ParseNumberError!ExprAST {
+    const ParseNumberError = error{WrongTokenType} || std.mem.Allocator.Error || TokenIter.TokenIterError;
+    fn parseNumber(self: *Parser) ParseNumberError!*ExprAST {
         const result = try switch (self.curr) {
-            .number => |val| ExprAST.NumberExprAST.init(val),
+            .number => |val| ExprAST.create(
+                &self.allocator,
+                .{ .number = .init(val) },
+            ),
             else => error.WrongTokenType,
         };
         _ = try self.next();
@@ -34,11 +38,11 @@ const Parser = struct {
     }
 
     const ParseParenError = error{MissingClosingParen};
-    fn parseParenExpr(self: *Parser) ParseParenError!ExprAST {
+    fn parseParenExpr(self: *Parser) ParseParenError!*ExprAST {
         // Consume '('
         assert(std.meta.activeTag(self.curr) == TokenTag.open_paren);
         _ = try self.next();
-        const expr: ExprAST = try self.parseExpr();
+        const expr: *ExprAST = try self.parseExpr();
 
         if (std.meta.activeTag(self.curr) != TokenTag.close_paren) {
             return error.MissingClosingParen;
@@ -47,14 +51,17 @@ const Parser = struct {
         return expr;
     }
 
-    fn ParseIdentifierExpr(self: *Parser) ExprAST {}
+    fn ParseIdentifierExpr(self: *Parser) *ExprAST {
+        _ = self;
+        unreachable;
+    }
 
     fn next(self: *Parser) TokenIter.TokenIterError!Token {
         self.curr = try self.iter.nextTok();
         return self.curr;
     }
 
-    pub fn init(source: []const u8, allocator: mem.Allocator) Parser {
+    pub fn init(allocator: mem.Allocator, source: []const u8) Parser {
         return .{
             .iter = .init(source),
             .allocator = allocator,
@@ -63,7 +70,8 @@ const Parser = struct {
 };
 
 test "Parser.next()" {
-    var parser = Parser.init("foo = 42");
+    var dbg_allocator: std.heap.DebugAllocator(.{ .safety = true }) = .init;
+    var parser = Parser.init(dbg_allocator.allocator(), "foo = 42");
 
     var tok = try parser.next();
     try std.testing.expectEqual(Token.identifier, std.meta.activeTag(tok));
@@ -83,7 +91,15 @@ test "Parser.next()" {
 }
 
 test "Parser.parseNumber()" {
-    var parser = Parser.init("42");
+    var dbg_allocator: std.heap.DebugAllocator(.{ .safety = true }) = .init;
+    defer {
+        const check = dbg_allocator.deinit();
+        assert(check == std.heap.Check.ok);
+    }
+    var arena: std.heap.ArenaAllocator = .init(dbg_allocator.allocator());
+    defer arena.deinit();
+
+    var parser = Parser.init(arena.allocator(), "42");
 
     const tok = try parser.next();
 

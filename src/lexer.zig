@@ -39,6 +39,8 @@ pub const Token = union(TokenTag) {
     bang_equal: void,
     less: void,
     greater: void,
+    open_paren: void,
+    close_paren: void,
 
     fn initIdentifier(str: []const u8) Token {
         std.log.debug("Token.initIdentifier('{s}')", .{str});

@@ -1,4 +1,5 @@
 const std = @import("std");
+const AllocError = std.mem.Allocator.Error;
 
 pub const ExprAST = struct {
     const Tag = enum {
@@ -8,7 +9,7 @@ pub const ExprAST = struct {
         call,
     };
 
-    pub fn create(allocator: *std.mem.Allocator, expr_type: Type) *ExprAST {
+    pub fn create(allocator: *std.mem.Allocator, expr_type: Type) AllocError!*ExprAST {
         var expr = try allocator.create(ExprAST);
         expr.type = expr_type;
 
@@ -18,28 +19,16 @@ pub const ExprAST = struct {
     pub const NumberExprAST = struct {
         val: f64,
 
-        pub fn init(val: f64) ExprAST {
-            return .{
-                .type = .{
-                    .number = .{
-                        .val = val,
-                    },
-                },
-            };
+        pub fn init(val: f64) NumberExprAST {
+            return .{ .val = val };
         }
     };
 
     pub const VariableExprAST = struct {
         name: []u8,
 
-        pub fn init(name: []u8) ExprAST {
-            return .{
-                .type = .{
-                    .variable = .{
-                        .name = name,
-                    },
-                },
-            };
+        pub fn init(name: []u8) VariableExprAST {
+            return .{ .name = name };
         }
     };
 
@@ -50,16 +39,8 @@ pub const ExprAST = struct {
         lhs: *ExprAST,
         rhs: *ExprAST,
 
-        pub fn init(op: BinaryOperator, lhs: ExprAST, rhs: ExprAST) ExprAST {
-            return .{
-                .type = .{
-                    .binary = .{
-                        .op = op,
-                        .lhs = lhs,
-                        .rhs = rhs,
-                    },
-                },
-            };
+        pub fn init(op: BinaryOperator, lhs: ExprAST, rhs: ExprAST) BinaryExprAST {
+            return .{ .op = op, .lhs = lhs, .rhs = rhs };
         }
     };
 
@@ -67,14 +48,10 @@ pub const ExprAST = struct {
         callee: []u8,
         args: []*ExprAST,
 
-        pub fn init(callee: []u8, args: []*ExprAST) ExprAST {
+        pub fn init(callee: []u8, args: []*ExprAST) CallExprAST {
             return .{
-                .type = .{
-                    .call = .{
-                        .callee = callee,
-                        .args = args,
-                    },
-                },
+                .callee = callee,
+                .args = args,
             };
         }
     };
