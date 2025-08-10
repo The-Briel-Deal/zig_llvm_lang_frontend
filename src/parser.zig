@@ -1,6 +1,7 @@
 const std = @import("std");
 const mem = std.mem;
 const assert = std.debug.assert;
+const AllocError = mem.Allocator.Error;
 
 const zllf = @import("zllf");
 
@@ -24,7 +25,7 @@ const Parser = struct {
         unreachable;
     }
 
-    const ParseNumberError = error{WrongTokenType} || std.mem.Allocator.Error || TokenIter.TokenIterError;
+    const ParseNumberError = error{WrongTokenType} || AllocError || TokenIter.Error;
     fn parseNumber(self: *Parser) ParseNumberError!*ExprAST {
         const result = try switch (self.curr) {
             .number => |val| ExprAST.create(
@@ -56,7 +57,7 @@ const Parser = struct {
         unreachable;
     }
 
-    fn next(self: *Parser) TokenIter.TokenIterError!Token {
+    fn next(self: *Parser) TokenIter.Error!Token {
         self.curr = try self.iter.nextTok();
         return self.curr;
     }

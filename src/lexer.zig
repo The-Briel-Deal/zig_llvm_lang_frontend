@@ -109,8 +109,8 @@ pub const TokenIter = struct {
         return char;
     }
 
-    pub const TokenIterError = (std.fmt.ParseFloatError || Token.InitOperatorError);
-    pub fn nextTok(self: *TokenIter) TokenIterError!Token {
+    pub const Error = (std.fmt.ParseFloatError || Token.InitOperatorError);
+    pub fn nextTok(self: *TokenIter) Error!Token {
         var strStart: ?u32 = null;
         self.state = .start;
         while (true) {
