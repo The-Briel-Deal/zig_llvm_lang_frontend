@@ -11,10 +11,12 @@ const Parser = struct {
 
     const ParseNumberError = error{WrongType};
     fn parseNumber(self: *Parser) ParseNumberError!ast.ExprAST {
-        return switch (self.curr) {
+        const result = switch (self.curr) {
             .number => |val| ast.ExprAST.NumberExprAST.init(val),
             else => ParseNumberError.WrongType,
         };
+        self.next();
+        return result;
     }
 
     fn next(self: *Parser) !lexer.Token {
