@@ -11,16 +11,28 @@ pub const ExprAST = struct {
     pub const NumberExprAST = struct {
         val: f64,
 
-        fn init(val: f64) ExprAST {
-            return .{ .type = .{ .val = val } };
+        pub fn init(val: f64) ExprAST {
+            return .{
+                .type = .{
+                    .number = .{
+                        .val = val,
+                    },
+                },
+            };
         }
     };
 
     pub const VariableExprAST = struct {
         name: []u8,
 
-        fn init(name: []u8) ExprAST {
-            return .{ .type = .{ .name = name } };
+        pub fn init(name: []u8) ExprAST {
+            return .{
+                .type = .{
+                    .variable = .{
+                        .name = name,
+                    },
+                },
+            };
         }
     };
 
@@ -31,8 +43,16 @@ pub const ExprAST = struct {
         lhs: *ExprAST,
         rhs: *ExprAST,
 
-        fn init(op: BinaryOperator, lhs: ExprAST, rhs: ExprAST) ExprAST {
-            return .{ .type = .{ .op = op, .lhs = lhs, .rhs = rhs } };
+        pub fn init(op: BinaryOperator, lhs: ExprAST, rhs: ExprAST) ExprAST {
+            return .{
+                .type = .{
+                    .binary = .{
+                        .op = op,
+                        .lhs = lhs,
+                        .rhs = rhs,
+                    },
+                },
+            };
         }
     };
 
@@ -40,8 +60,15 @@ pub const ExprAST = struct {
         callee: []u8,
         args: []*ExprAST,
 
-        fn init(callee: []u8, args: []*ExprAST) ExprAST {
-            return .{ .type = .{ .callee = callee, .args = args } };
+        pub fn init(callee: []u8, args: []*ExprAST) ExprAST {
+            return .{
+                .type = .{
+                    .call = .{
+                        .callee = callee,
+                        .args = args,
+                    },
+                },
+            };
         }
     };
 

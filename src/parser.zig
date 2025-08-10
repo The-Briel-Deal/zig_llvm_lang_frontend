@@ -9,12 +9,12 @@ const Parser = struct {
     curr: lexer.Token = undefined,
     iter: lexer.TokenIter,
 
-    fn parseNumber(self: *Parser) !ast.ExprAST {
-        switch (self.curr) {
-            .number => |val| {
-                return ast.ExprAST.NumberExprAST.init(val);
-            },
-        }
+    const ParseNumberError = error{WrongType};
+    fn parseNumber(self: *Parser) ParseNumberError!ast.ExprAST {
+        return switch (self.curr) {
+            .number => |val| ast.ExprAST.NumberExprAST.init(val),
+            else => ParseNumberError.WrongType,
+        };
     }
 
     fn next(self: *Parser) !lexer.Token {
@@ -45,4 +45,17 @@ test "Parser.next()" {
     try std.testing.expectEqual(lexer.Token.number, std.meta.activeTag(tok));
     try std.testing.expectEqual(42, tok.number);
     try std.testing.expectEqual(tok, parser.curr);
+}
+
+test "Parser.parseNumber()" {
+    var parser = Parser.init("42");
+
+    const tok = try parser.next();
+
+    try std.testing.expectEqual(lexer.Token.number, std.meta.activeTag(tok));
+    try std.testing.expectEqual(42, tok.number);
+    try std.testing.expectEqual(tok, parser.curr);
+    const ast_expr = try parser.parseNumber();
+    try std.testing.expectEqual(.number, std.meta.activeTag(ast_expr.type));
+    try std.testing.expectEqual(42, ast_expr.type.number.val);
 }
