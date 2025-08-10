@@ -78,6 +78,9 @@ pub const Token = union(TokenTag) {
             },
             '>' => return .greater,
             '<' => return .less,
+            '(' => return .open_paren,
+            ')' => return .close_paren,
+            ',' => return .comma,
             else => return InitOperatorError.UnknownOperator,
         }
     }
