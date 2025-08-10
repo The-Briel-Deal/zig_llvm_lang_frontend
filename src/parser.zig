@@ -9,6 +9,14 @@ const Parser = struct {
     curr: lexer.Token = undefined,
     iter: lexer.TokenIter,
 
+    fn parseNumber(self: *Parser) !ast.ExprAST {
+        switch (self.curr) {
+            .number => |val| {
+                return ast.ExprAST.NumberExprAST.init(val);
+            },
+        }
+    }
+
     fn next(self: *Parser) !lexer.Token {
         self.curr = try self.iter.nextTok();
         return self.curr;
