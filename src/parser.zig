@@ -20,9 +20,19 @@ const Parser = struct {
     allocator: mem.Allocator,
 
     const ParseExprError = ParseNumberError || ParseParenError;
-    fn parseExpr(self: *Parser) ParseExprError!ExprAST {
+    fn parseExpr(self: *Parser) ParseExprError!*ExprAST {
         _ = self;
         unreachable;
+    }
+
+    const ParsePrimaryError = error{UnknownTokenForExpr} || ParseIdentError || ParseNumberError || ParseParenError;
+    fn parsePrimaryExpr(self: *Parser) ParsePrimaryError!*ExprAST {
+        return switch (self.curr) {
+            .identifier => self.ParseIdentifierExpr(),
+            .number => self.parseNumber(),
+            .open_paren => self.parseParenExpr(),
+            else => error.UnknownTokenForExpr,
+        };
     }
 
     const ParseNumberError = error{WrongTokenType} || AllocError || TokenIter.Error;
