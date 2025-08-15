@@ -18,15 +18,21 @@ const Parser = struct {
     curr: Token = undefined,
     iter: TokenIter,
     allocator: mem.Allocator,
+    const Error = error{
+        UnknownTokenForExpr,
+        OutOfMemory,
+        InvalidCharacter,
+        UnknownOperator,
+        WrongTokenType,
+        UnexpectedArgListToken,
+        MissingClosingParen,
+    };
 
-    const ParseExprError = ParseNumberError || ParseParenError;
-    fn parseExpr(self: *Parser) ParseExprError!*ExprAST {
-        _ = self;
-        unreachable;
+    pub fn parseExpr(self: *Parser) Error!*ExprAST {
+        return self.parsePrimaryExpr();
     }
 
-    const ParsePrimaryError = error{UnknownTokenForExpr} || ParseIdentError || ParseNumberError || ParseParenError;
-    fn parsePrimaryExpr(self: *Parser) ParsePrimaryError!*ExprAST {
+    fn parsePrimaryExpr(self: *Parser) !*ExprAST {
         return switch (self.curr) {
             .identifier => self.ParseIdentifierExpr(),
             .number => self.parseNumber(),
@@ -35,8 +41,7 @@ const Parser = struct {
         };
     }
 
-    const ParseNumberError = error{WrongTokenType} || AllocError || TokenIter.Error;
-    fn parseNumber(self: *Parser) ParseNumberError!*ExprAST {
+    fn parseNumber(self: *Parser) !*ExprAST {
         const result = try switch (self.curr) {
             .number => |val| ExprAST.create(
                 &self.allocator,
@@ -48,8 +53,7 @@ const Parser = struct {
         return result;
     }
 
-    const ParseParenError = error{MissingClosingParen};
-    fn parseParenExpr(self: *Parser) ParseParenError!*ExprAST {
+    fn parseParenExpr(self: *Parser) !*ExprAST {
         // Consume '('
         assert(self.curr.tag() == TokenTag.open_paren);
         _ = try self.next();
@@ -62,8 +66,7 @@ const Parser = struct {
         return expr;
     }
 
-    const ParseIdentError = error{UnexpectedArgListToken} || AllocError;
-    fn ParseIdentifierExpr(self: *Parser) ParseIdentError!*ExprAST {
+    fn ParseIdentifierExpr(self: *Parser) !*ExprAST {
         assert(self.curr.tag() == TokenTag.identifier);
         const name = self.curr.identifier;
         _ = try self.next(); // Consume identifier
@@ -71,7 +74,7 @@ const Parser = struct {
         switch (self.curr) {
             .open_paren => {
                 _ = try self.next(); // Consume '('
-                var args: std.ArrayList([]u8) = .init(self.allocator);
+                var args: std.ArrayList(*ExprAST) = .init(self.allocator);
                 while (true) {
                     const arg = try self.parseExpr();
                     try args.append(arg);
@@ -151,4 +154,20 @@ test "Parser.parseNumber()" {
     const ast_expr = try parser.parseNumber();
     try std.testing.expectEqual(.number, std.meta.activeTag(ast_expr.type));
     try std.testing.expectEqual(42, ast_expr.type.number.val);
+}
+
+test "Parser.parseExpr()" {
+    var dbg_allocator: std.heap.DebugAllocator(.{ .safety = true }) = .init;
+    defer {
+        const check = dbg_allocator.deinit();
+        assert(check == std.heap.Check.ok);
+    }
+    var arena: std.heap.ArenaAllocator = .init(dbg_allocator.allocator());
+    defer arena.deinit();
+
+    var parser = Parser.init(arena.allocator(), "42");
+
+    const expr: *ExprAST = try parser.parseExpr();
+
+    try std.testing.expectEqual(.number, expr.tag());
 }

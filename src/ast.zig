@@ -9,6 +9,10 @@ pub const ExprAST = struct {
         call,
     };
 
+    pub fn tag(self: *const ExprAST) Tag {
+        return std.meta.activeTag(self.type);
+    }
+
     pub fn create(allocator: *std.mem.Allocator, expr_type: Type) AllocError!*ExprAST {
         var expr = try allocator.create(ExprAST);
         expr.type = expr_type;
@@ -25,9 +29,9 @@ pub const ExprAST = struct {
     };
 
     pub const VariableExprAST = struct {
-        name: []u8,
+        name: []const u8,
 
-        pub fn init(name: []u8) VariableExprAST {
+        pub fn init(name: []const u8) VariableExprAST {
             return .{ .name = name };
         }
     };
@@ -45,10 +49,10 @@ pub const ExprAST = struct {
     };
 
     pub const CallExprAST = struct {
-        callee: []u8,
+        callee: []const u8,
         args: []*ExprAST,
 
-        pub fn init(callee: []u8, args: []*ExprAST) CallExprAST {
+        pub fn init(callee: []const u8, args: []*ExprAST) CallExprAST {
             return .{
                 .callee = callee,
                 .args = args,
