@@ -53,9 +53,11 @@ const Parser = struct {
 
             const bin_op = self.curr;
             _ = try self.next();
-            const rhs = try self.parsePrimaryExpr();
+            var rhs = try self.parsePrimaryExpr();
             const next_prec = self.curr.opPrecedence() orelse 0;
-            if (tok_prec < next_prec) {}
+            if (tok_prec < next_prec) {
+                rhs = try self.parseBinOpRHS(tok_prec + 1, rhs);
+            }
 
             lhs = try ExprAST.create(self.allocator, .{
                 .binary = try .init(bin_op, lhs, rhs),
