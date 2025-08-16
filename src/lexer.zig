@@ -12,17 +12,25 @@ pub const TokenTag = enum {
     identifier,
     number,
 
-    /// Operators
-    add,
-    subtract,
-    equal,
-    equal_equal,
-    bang_equal,
-    less,
-    greater,
     open_paren,
     close_paren,
+
+    /// Operators
     comma,
+
+    equal,
+
+    equal_equal,
+    bang_equal,
+
+    less,
+    greater,
+
+    add,
+    subtract,
+
+    multiply,
+    divide,
 };
 
 pub const Token = union(TokenTag) {
@@ -32,17 +40,25 @@ pub const Token = union(TokenTag) {
     identifier: []const u8,
     number: f64,
 
-    /// Operators
-    add: void,
-    subtract: void,
-    equal: void,
-    equal_equal: void,
-    bang_equal: void,
-    less: void,
-    greater: void,
     open_paren: void,
     close_paren: void,
+
+    /// Operators
     comma: void,
+
+    equal: void,
+
+    equal_equal: void,
+    bang_equal: void,
+
+    less: void,
+    greater: void,
+
+    add: void,
+    subtract: void,
+
+    multiply: void,
+    divide: void,
 
     fn initIdentifier(str: []const u8) Token {
         std.log.debug("Token.initIdentifier('{s}')", .{str});
@@ -86,6 +102,16 @@ pub const Token = union(TokenTag) {
     }
     pub fn tag(self: *const Token) TokenTag {
         return std.meta.activeTag(self.*);
+    }
+    pub fn opPrecedence(self: *const Token) u8 {
+        return switch (self.*) {
+            .comma => 3,
+            .equal => 5,
+            .equal_equal, .bang_equal => 7,
+            .less, .greater => 10,
+            .add, .subtract => 20,
+            .multiply, .divide => 40,
+        };
     }
 };
 
