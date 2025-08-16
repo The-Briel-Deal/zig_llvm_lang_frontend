@@ -27,7 +27,7 @@ const Parser = struct {
         UnexpectedArgListToken,
         MissingClosingParen,
         InvalidBinaryOperator,
-    };
+    } || ExprAST.BinaryExprAST.Error;
 
     pub fn parseExpr(self: *Parser) Error!*ExprAST {
         _ = try self.next();
@@ -59,7 +59,7 @@ const Parser = struct {
                 rhs = try self.parseBinOpRHS(tok_prec + 1, rhs);
             }
 
-            lhs = try ExprAST.create(self.allocator, .{
+            lhs = try ExprAST.create(&self.allocator, .{
                 .binary = try .init(bin_op, lhs, rhs),
             });
         }
@@ -98,10 +98,10 @@ const Parser = struct {
         switch (self.curr) {
             .open_paren => {
                 _ = try self.next(); // Consume '('
-                var args: std.ArrayList(*ExprAST) = .init(self.allocator);
+                var args: std.ArrayList(*ExprAST) = .empty;
                 while (true) {
                     const arg = try self.parseExpr();
-                    try args.append(arg);
+                    try args.append(self.allocator, arg);
 
                     if (self.curr.tag() == TokenTag.close_paren)
                         break;

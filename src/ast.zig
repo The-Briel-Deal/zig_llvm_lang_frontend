@@ -44,9 +44,9 @@ pub const ExprAST = struct {
         lhs: *ExprAST,
         rhs: *ExprAST,
 
-        const Error = error{TokenIsNotOperator};
+        pub const Error = error{TokenIsNotOperator};
 
-        pub fn init(op: lexer.Token, lhs: ExprAST, rhs: ExprAST) Error!BinaryExprAST {
+        pub fn init(op: lexer.Token, lhs: *ExprAST, rhs: *ExprAST) Error!BinaryExprAST {
             if (op.isOperator())
                 return .{ .op = op, .lhs = lhs, .rhs = rhs };
             return Error.TokenIsNotOperator;

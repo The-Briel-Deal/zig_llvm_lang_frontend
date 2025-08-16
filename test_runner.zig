@@ -8,7 +8,7 @@ const BRIGHT_GREEN_FOREGROUND = "\x1b[92m";
 const BRIGHT_YELLOW_FOREGROUND = "\x1b[93m";
 const BRIGHT_RED_FOREGROUND = "\x1b[101m";
 
-var log_buffer: std.ArrayList(u8) = undefined;
+var allocating_writer: std.Io.Writer.Allocating = undefined;
 
 pub fn main() !void {
     var gpa = std.heap.DebugAllocator(.{}).init;
@@ -16,7 +16,8 @@ pub fn main() !void {
         var buf: [64]u8 = undefined;
         var stdout = std.fs.File.stdout();
         var stdout_writer = stdout.writer(&buf);
-        log_buffer = .init(gpa.allocator());
+        var log_buffer: std.ArrayList(u8) = .empty;
+        allocating_writer = .fromArrayList(gpa.allocator(), &log_buffer);
         defer {
             stdout_writer.interface.print("{s}", .{log_buffer.items}) catch @panic("Writing logs to stdout failed!");
             log_buffer.clearRetainingCapacity();
@@ -47,7 +48,7 @@ fn logHandler(
     comptime format: []const u8,
     args: anytype,
 ) void {
-    var writer = log_buffer.writer();
+    var writer = allocating_writer.writer;
 
     _ = writer.write("  ") catch return;
     _ = writer.write(BRIGHT_YELLOW_FOREGROUND) catch return;
