@@ -1,6 +1,9 @@
 const std = @import("std");
 const AllocError = std.mem.Allocator.Error;
 
+const zllf = @import("zllf");
+const lexer = zllf.lexer;
+
 pub const ExprAST = struct {
     const Tag = enum {
         number,
@@ -37,14 +40,16 @@ pub const ExprAST = struct {
     };
 
     pub const BinaryExprAST = struct {
-        const BinaryOperator = enum { add, subtract, equals, less, greater };
-
-        op: BinaryOperator,
+        op: lexer.Token,
         lhs: *ExprAST,
         rhs: *ExprAST,
 
-        pub fn init(op: BinaryOperator, lhs: ExprAST, rhs: ExprAST) BinaryExprAST {
-            return .{ .op = op, .lhs = lhs, .rhs = rhs };
+        const Error = error{TokenIsNotOperator};
+
+        pub fn init(op: lexer.Token, lhs: ExprAST, rhs: ExprAST) Error!BinaryExprAST {
+            if (op.isOperator())
+                return .{ .op = op, .lhs = lhs, .rhs = rhs };
+            return Error.TokenIsNotOperator;
         }
     };
 

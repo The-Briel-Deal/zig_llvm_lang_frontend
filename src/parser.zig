@@ -26,11 +26,13 @@ const Parser = struct {
         WrongTokenType,
         UnexpectedArgListToken,
         MissingClosingParen,
+        InvalidBinaryOperator,
     };
 
     pub fn parseExpr(self: *Parser) Error!*ExprAST {
         _ = try self.next();
-        return self.parsePrimaryExpr();
+        const lhs = try self.parsePrimaryExpr();
+        return try self.parseBinOpRHS(0, lhs);
     }
 
     fn parsePrimaryExpr(self: *Parser) !*ExprAST {
@@ -41,6 +43,24 @@ const Parser = struct {
             .open_paren => self.parseParenExpr(),
             else => error.UnknownTokenForExpr,
         };
+    }
+    fn parseBinOpRHS(self: *Parser, curr_prec: u8, initial_lhs: *ExprAST) !*ExprAST {
+        var lhs = initial_lhs;
+        while (true) {
+            const tok_prec = self.curr.opPrecedence() orelse 0;
+
+            if (tok_prec < curr_prec) return lhs;
+
+            const bin_op = self.curr;
+            _ = try self.next();
+            const rhs = try self.parsePrimaryExpr();
+            const next_prec = self.curr.opPrecedence() orelse 0;
+            if (tok_prec < next_prec) {}
+
+            lhs = try ExprAST.create(self.allocator, .{
+                .binary = try .init(bin_op, lhs, rhs),
+            });
+        }
     }
 
     fn parseNumber(self: *Parser) !*ExprAST {

@@ -103,7 +103,7 @@ pub const Token = union(TokenTag) {
     pub fn tag(self: *const Token) TokenTag {
         return std.meta.activeTag(self.*);
     }
-    pub fn opPrecedence(self: *const Token) u8 {
+    pub fn opPrecedence(self: *const Token) ?u8 {
         return switch (self.*) {
             .comma => 3,
             .equal => 5,
@@ -111,6 +111,23 @@ pub const Token = union(TokenTag) {
             .less, .greater => 10,
             .add, .subtract => 20,
             .multiply, .divide => 40,
+            else => null,
+        };
+    }
+    pub fn isOperator(self: *const Token) bool {
+        return switch (self.*) {
+            .comma,
+            .equal,
+            .equal_equal,
+            .bang_equal,
+            .less,
+            .greater,
+            .add,
+            .subtract,
+            .multiply,
+            .divide,
+            => true,
+            else => false,
         };
     }
 };
