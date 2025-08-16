@@ -33,6 +33,7 @@ const Parser = struct {
     }
 
     fn parsePrimaryExpr(self: *Parser) !*ExprAST {
+        std.log.debug("Parser.parsePrimaryExpr(): self.curr = {any}", .{self.curr});
         return switch (self.curr) {
             .identifier => self.ParseIdentifierExpr(),
             .number => self.parseNumber(),
