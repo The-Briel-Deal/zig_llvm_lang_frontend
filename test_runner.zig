@@ -16,12 +16,13 @@ pub fn main() !void {
         var buf: [64]u8 = undefined;
         var stdout = std.fs.File.stdout();
         var stdout_writer = stdout.writer(&buf);
-        var log_buffer: std.ArrayList(u8) = .empty;
-        allocating_writer = .fromArrayList(gpa.allocator(), &log_buffer);
+        allocating_writer = .init(gpa.allocator());
         defer {
-            stdout_writer.interface.print("{s}", .{log_buffer.items}) catch @panic("Writing logs to stdout failed!");
-            log_buffer.clearRetainingCapacity();
+            var test_logs = allocating_writer.toArrayList();
+            stdout_writer.interface.print("{s}", .{test_logs.items}) catch
+                @panic("Writing logs to stdout failed!");
             stdout_writer.interface.flush() catch @panic("Flushing to stdout failed");
+            test_logs.clearAndFree(gpa.allocator());
         }
 
         t.func() catch |err| {
@@ -48,7 +49,7 @@ fn logHandler(
     comptime format: []const u8,
     args: anytype,
 ) void {
-    var writer = allocating_writer.writer;
+    var writer = &allocating_writer.writer;
 
     _ = writer.write("  ") catch return;
     _ = writer.write(BRIGHT_YELLOW_FOREGROUND) catch return;
