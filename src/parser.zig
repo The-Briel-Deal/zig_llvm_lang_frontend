@@ -27,6 +27,7 @@ const Parser = struct {
         UnexpectedArgListToken,
         MissingClosingParen,
         InvalidBinaryOperator,
+        EndOfFile,
     } || ExprAST.BinaryExprAST.Error;
 
     pub fn parseExpr(self: *Parser) Error!*ExprAST {
@@ -41,7 +42,8 @@ const Parser = struct {
             .identifier => self.ParseIdentifierExpr(),
             .number => self.parseNumber(),
             .open_paren => self.parseParenExpr(),
-            else => error.UnknownTokenForExpr,
+            .eof => Error.EndOfFile,
+            else => Error.UnknownTokenForExpr,
         };
     }
     fn parseBinOpRHS(self: *Parser, curr_prec: u8, initial_lhs: *ExprAST) !*ExprAST {
@@ -53,7 +55,10 @@ const Parser = struct {
 
             const bin_op = self.curr;
             _ = try self.next();
-            var rhs = try self.parsePrimaryExpr();
+            var rhs = self.parsePrimaryExpr() catch |e| return switch (e) {
+                Error.EndOfFile => lhs,
+                else => e,
+            };
             const next_prec = self.curr.opPrecedence() orelse 0;
             if (tok_prec < next_prec) {
                 rhs = try self.parseBinOpRHS(tok_prec + 1, rhs);
@@ -71,7 +76,7 @@ const Parser = struct {
                 &self.allocator,
                 .{ .number = .init(val) },
             ),
-            else => error.WrongTokenType,
+            else => Error.WrongTokenType,
         };
         _ = try self.next();
         return result;
@@ -84,7 +89,7 @@ const Parser = struct {
         const expr: *ExprAST = try self.parseExpr();
 
         if (self.curr.tag() != TokenTag.close_paren) {
-            return error.MissingClosingParen;
+            return Error.MissingClosingParen;
         }
         _ = try self.next();
         return expr;
@@ -109,7 +114,7 @@ const Parser = struct {
                         _ = try self.next();
                         continue;
                     }
-                    return error.UnexpectedArgListToken;
+                    return Error.UnexpectedArgListToken;
                 }
                 // Consume ')'
                 assert(self.curr == TokenTag.close_paren);
