@@ -29,6 +29,7 @@ const Parser = struct {
     };
 
     pub fn parseExpr(self: *Parser) Error!*ExprAST {
+        _ = try self.next();
         return self.parsePrimaryExpr();
     }
 
