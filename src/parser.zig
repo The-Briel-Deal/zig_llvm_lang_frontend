@@ -185,7 +185,11 @@ test "Parser.parseNumber()" {
     try std.testing.expectEqual(42, ast_expr.type.number.val);
 }
 
-test "Parser.parseExpr() - Number" {
+test "Parser.parseExpr()" {
+    const TestCase = struct {
+        in: []const u8,
+        expect_out: []const u8,
+    };
     var dbg_allocator: std.heap.DebugAllocator(.{ .safety = true }) = .init;
     defer {
         const check = dbg_allocator.deinit();
@@ -194,36 +198,29 @@ test "Parser.parseExpr() - Number" {
     var arena: std.heap.ArenaAllocator = .init(dbg_allocator.allocator());
     defer arena.deinit();
 
-    var parser = Parser.init(arena.allocator(), "42");
+    inline for ([_]TestCase{
+        .{
+            .in = "42",
+            .expect_out = (
+                \\NumberExpr(42)
+                \\
+            ),
+        },
+        .{
+            .in = "42 + 63",
+            .expect_out = (
+                \\BinaryExpr:
+                \\  NumberExpr(42)
+                \\  op(add)
+                \\  NumberExpr(63)
+                \\
+            ),
+        },
+    }) |case| {
+        var parser = Parser.init(arena.allocator(), case.in);
 
-    const expr: *ExprAST = try parser.parseExpr();
+        const expr: *ExprAST = try parser.parseExpr();
 
-    try std.testing.expectEqual(.number, expr.tag());
-}
-
-test "Parser.parseExpr() - BinaryOp" {
-    var dbg_allocator: std.heap.DebugAllocator(.{ .safety = true }) = .init;
-    defer {
-        const check = dbg_allocator.deinit();
-        assert(check == std.heap.Check.ok);
+        try expr.expect(case.expect_out);
     }
-    var arena: std.heap.ArenaAllocator = .init(dbg_allocator.allocator());
-    defer arena.deinit();
-    var writer: std.Io.Writer.Allocating = .init(arena.allocator());
-
-    var parser = Parser.init(arena.allocator(), "42 + 63");
-
-    var expr: *ExprAST = try parser.parseExpr();
-
-    try expr.printNode(&writer.writer, 0);
-
-    const expect = (
-        \\BinaryExpr:
-        \\  NumberExpr(42)
-        \\  op(add)
-        \\  NumberExpr(63)
-        \\
-    );
-
-    try std.testing.expectEqualStrings(expect, writer.written());
 }
