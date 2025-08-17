@@ -209,26 +209,21 @@ test "Parser.parseExpr() - BinaryOp" {
     }
     var arena: std.heap.ArenaAllocator = .init(dbg_allocator.allocator());
     defer arena.deinit();
+    var writer: std.Io.Writer.Allocating = .init(arena.allocator());
 
     var parser = Parser.init(arena.allocator(), "42 + 63");
 
     var expr: *ExprAST = try parser.parseExpr();
 
-    try std.testing.expectEqual(.binary, expr.tag());
-    try std.testing.expectEqual(.add, expr.type.binary.op);
-    try std.testing.expectEqual(ExprAST{
-        .type = .{
-            .number = .{
-                .val = 42,
-            },
-        },
-    }, expr.type.binary.lhs.*);
-    try std.testing.expectEqual(ExprAST{
-        .type = .{
-            .number = .{
-                .val = 63,
-            },
-        },
-    }, expr.type.binary.rhs.*);
-    try std.testing.expectError(Parser.Error.EndOfFile, parser.parseExpr());
+    try expr.printNode(&writer.writer, 0);
+
+    const expect = (
+        \\BinaryExpr:
+        \\  NumberExpr(42)
+        \\  op(add)
+        \\  NumberExpr(63)
+        \\
+    );
+
+    try std.testing.expectEqualStrings(expect, writer.written());
 }

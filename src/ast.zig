@@ -1,4 +1,5 @@
 const std = @import("std");
+const Allocator = std.mem.Allocator;
 const AllocError = std.mem.Allocator.Error;
 
 const zllf = @import("zllf");
@@ -16,7 +17,7 @@ pub const ExprAST = struct {
         return std.meta.activeTag(self.type);
     }
 
-    pub fn create(allocator: std.mem.Allocator, expr_type: Type) AllocError!*ExprAST {
+    pub fn create(allocator: Allocator, expr_type: Type) AllocError!*ExprAST {
         var expr = try allocator.create(ExprAST);
         expr.type = expr_type;
 
@@ -41,12 +42,12 @@ pub const ExprAST = struct {
 
     pub const BinaryExprAST = struct {
         op: lexer.Token,
-        lhs: *ExprAST,
-        rhs: *ExprAST,
+        lhs: *const ExprAST,
+        rhs: *const ExprAST,
 
         pub const Error = error{TokenIsNotOperator};
 
-        pub fn init(op: lexer.Token, lhs: *ExprAST, rhs: *ExprAST) Error!BinaryExprAST {
+        pub fn init(op: lexer.Token, lhs: *const ExprAST, rhs: *const ExprAST) Error!BinaryExprAST {
             if (op.isOperator())
                 return .{ .op = op, .lhs = lhs, .rhs = rhs };
             return Error.TokenIsNotOperator;
@@ -78,7 +79,7 @@ pub const ExprAST = struct {
             try writer.print("  ", .{});
     }
 
-    pub fn printNode(self: *ExprAST, writer: *std.Io.Writer, depth: u32) !void {
+    pub fn printNode(self: *const ExprAST, writer: *std.Io.Writer, depth: u32) !void {
         switch (self.type) {
             .binary => |val| {
                 try printIndent(writer, depth);
@@ -107,6 +108,14 @@ pub const ExprAST = struct {
                 }
             },
         }
+    }
+    pub fn expect(self: *const ExprAST, comptime expected: []const u8) !void {
+        var buffer: [expected.len * 2]u8 = undefined;
+        var fba: std.heap.FixedBufferAllocator = .init(&buffer);
+
+        var writer: std.Io.Writer.Allocating = .init(fba.allocator());
+        try self.printNode(&writer.writer, 0);
+        try std.testing.expectEqualStrings(expected, writer.written());
     }
 };
 
@@ -143,47 +152,41 @@ test "FunctionAST.init()" {
 }
 
 test "ExprAST.printNode()" {
-    var gpa: std.heap.DebugAllocator(.{}) = .init;
-
-    const TestCase = struct {
-        case: *ExprAST,
+    const TestCase = comptime struct {
+        expr: *const ExprAST,
         expect: []const u8,
     };
 
-    const cases = [_]TestCase{
+    const cases = comptime [_]TestCase{
         .{
-            .case = try ExprAST.create(
-                gpa.allocator(),
-                .{
+            .expr = &.{
+                .type = .{
                     .number = .init(46),
                 },
-            ),
+            },
             .expect = (
                 \\NumberExpr(46)
                 \\
             ),
         },
         .{
-            .case = try ExprAST.create(
-                gpa.allocator(),
-                .{
+            .expr = &.{
+                .type = .{
                     .binary = try .init(
                         .add,
-                        try ExprAST.create(
-                            gpa.allocator(),
-                            .{
+                        &.{
+                            .type = .{
                                 .number = .init(46),
                             },
-                        ),
-                        try ExprAST.create(
-                            gpa.allocator(),
-                            .{
+                        },
+                        &.{
+                            .type = .{
                                 .number = .init(102),
                             },
-                        ),
+                        },
                     ),
                 },
-            ),
+            },
             .expect = (
                 \\BinaryExpr:
                 \\  NumberExpr(46)
@@ -193,9 +196,7 @@ test "ExprAST.printNode()" {
             ),
         },
     };
-    for (cases) |case| {
-        var writer: std.Io.Writer.Allocating = .init(gpa.allocator());
-        try case.case.printNode(&writer.writer, 0);
-        try std.testing.expectEqualStrings(case.expect, writer.written());
+    inline for (cases) |case| {
+        try case.expr.expect(case.expect);
     }
 }
