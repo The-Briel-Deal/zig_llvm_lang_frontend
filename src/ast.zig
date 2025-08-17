@@ -87,7 +87,7 @@ pub const ExprAST = struct {
                 try val.lhs.printNode(writer, depth + 1);
 
                 try printIndent(writer, depth + 1);
-                try writer.print("op({s}):\n", .{@tagName(val.op)});
+                try writer.print("op({s})\n", .{@tagName(val.op)});
 
                 try val.rhs.printNode(writer, depth + 1);
             },
@@ -187,7 +187,7 @@ test "ExprAST.printNode()" {
             .expect = (
                 \\BinaryExpr:
                 \\  NumberExpr(46)
-                \\  op(add):
+                \\  op(add)
                 \\  NumberExpr(102)
                 \\
             ),
