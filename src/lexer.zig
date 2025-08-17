@@ -162,6 +162,12 @@ pub const TokenIter = struct {
         return char;
     }
 
+    fn lastChar(self: *TokenIter) u8 {
+        self.index.? -= 1;
+        const char = self.source[self.index.?];
+        return char;
+    }
+
     pub const Error = (std.fmt.ParseFloatError || Token.InitOperatorError);
     pub fn nextTok(self: *TokenIter) Error!Token {
         var strStart: ?u32 = null;
@@ -187,7 +193,7 @@ pub const TokenIter = struct {
                             self.state = .commentUntilNewLine;
                             continue;
                         },
-                        '+', '-', '*', '/', '=', '!', '<', '>' => {
+                        '+', '-', '*', '/', '=', '!', '<', '>', '(', ')' => {
                             strStart = self.index;
                             self.state = .startsWithOperator;
                             continue;
@@ -209,8 +215,8 @@ pub const TokenIter = struct {
                         '0'...'9' => continue,
                         '.' => continue,
                         else => {
-                            const strEnd = self.index.?;
-                            return .initNumber(self.source[strStart.?..strEnd]);
+                            _ = self.lastChar();
+                            return .initNumber(self.source[strStart.? .. self.index.? + 1]);
                         },
                     }
                 },
@@ -219,7 +225,10 @@ pub const TokenIter = struct {
                         '=' => {
                             return Token.initOperator(self.source[strStart.? .. self.index.? + 1]);
                         },
-                        else => return .initOperator(self.source[strStart.? .. strStart.? + 1]),
+                        else => {
+                            _ = self.lastChar();
+                            return Token.initOperator(self.source[strStart.? .. self.index.? + 1]);
+                        },
                     }
                 },
                 .commentUntilNewLine => {
@@ -308,5 +317,14 @@ test "TokenIter with operators" {
     try std.testing.expectEqual(Token{ .number = 1.2 }, try iter.nextTok());
     try std.testing.expectEqual(.less, try iter.nextTok());
     try std.testing.expectEqual(Token{ .number = 3.4 }, try iter.nextTok());
+    try std.testing.expectEqual(.eof, try iter.nextTok());
+}
+test "TokenIter with parenthesis" {
+    const src = "(1)";
+    var iter: TokenIter = .init(src);
+
+    try std.testing.expectEqual(.open_paren, try iter.nextTok());
+    try std.testing.expectEqual(Token{ .number = 1 }, try iter.nextTok());
+    try std.testing.expectEqual(.close_paren, try iter.nextTok());
     try std.testing.expectEqual(.eof, try iter.nextTok());
 }

@@ -207,6 +207,13 @@ test "Parser.parseExpr()" {
             ),
         },
         .{
+            .in = "(42)",
+            .expect_out = (
+                \\NumberExpr(42)
+                \\
+            ),
+        },
+        .{
             .in = "42 + 63",
             .expect_out = (
                 \\BinaryExpr:
