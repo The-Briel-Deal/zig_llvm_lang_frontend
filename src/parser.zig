@@ -185,7 +185,7 @@ test "Parser.parseNumber()" {
     try std.testing.expectEqual(42, ast_expr.type.number.val);
 }
 
-test "Parser.parseExpr()" {
+test "Parser.parseExpr() - Number" {
     var dbg_allocator: std.heap.DebugAllocator(.{ .safety = true }) = .init;
     defer {
         const check = dbg_allocator.deinit();
@@ -199,4 +199,35 @@ test "Parser.parseExpr()" {
     const expr: *ExprAST = try parser.parseExpr();
 
     try std.testing.expectEqual(.number, expr.tag());
+}
+
+test "Parser.parseExpr() - BinaryOp" {
+    var dbg_allocator: std.heap.DebugAllocator(.{ .safety = true }) = .init;
+    defer {
+        const check = dbg_allocator.deinit();
+        assert(check == std.heap.Check.ok);
+    }
+    var arena: std.heap.ArenaAllocator = .init(dbg_allocator.allocator());
+    defer arena.deinit();
+
+    var parser = Parser.init(arena.allocator(), "42 + 63");
+
+    const expr: *ExprAST = try parser.parseExpr();
+
+    try std.testing.expectEqual(.binary, expr.tag());
+    try std.testing.expectEqual(.add, expr.type.binary.op);
+    try std.testing.expectEqual(ExprAST{
+        .type = .{
+            .number = .{
+                .val = 42,
+            },
+        },
+    }, expr.type.binary.lhs.*);
+    try std.testing.expectEqual(ExprAST{
+        .type = .{
+            .number = .{
+                .val = 63,
+            },
+        },
+    }, expr.type.binary.rhs.*);
 }

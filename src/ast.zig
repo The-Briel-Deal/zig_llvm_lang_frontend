@@ -65,7 +65,7 @@ pub const ExprAST = struct {
         }
     };
 
-    const Type = union(Tag) {
+    pub const Type = union(Tag) {
         number: NumberExprAST,
         variable: VariableExprAST,
         binary: BinaryExprAST,
