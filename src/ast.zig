@@ -111,11 +111,10 @@ pub const ExprAST = struct {
     }
     pub fn expect(self: *const ExprAST, comptime expected: []const u8) !void {
         var buffer: [expected.len * 2]u8 = undefined;
-        var fba: std.heap.FixedBufferAllocator = .init(&buffer);
 
-        var writer: std.Io.Writer.Allocating = .init(fba.allocator());
-        try self.printNode(&writer.writer, 0);
-        try std.testing.expectEqualStrings(expected, writer.written());
+        var writer: std.Io.Writer = .fixed(&buffer);
+        try self.printNode(&writer, 0);
+        try std.testing.expectEqualStrings(expected, buffer[0..writer.end]);
     }
 };
 
