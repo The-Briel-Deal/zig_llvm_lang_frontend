@@ -212,7 +212,7 @@ test "Parser.parseExpr() - BinaryOp" {
 
     var parser = Parser.init(arena.allocator(), "42 + 63");
 
-    const expr: *ExprAST = try parser.parseExpr();
+    var expr: *ExprAST = try parser.parseExpr();
 
     try std.testing.expectEqual(.binary, expr.tag());
     try std.testing.expectEqual(.add, expr.type.binary.op);
@@ -230,4 +230,5 @@ test "Parser.parseExpr() - BinaryOp" {
             },
         },
     }, expr.type.binary.rhs.*);
+    try std.testing.expectError(Parser.Error.EndOfFile, parser.parseExpr());
 }
