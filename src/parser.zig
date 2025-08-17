@@ -216,6 +216,19 @@ test "Parser.parseExpr()" {
                 \\
             ),
         },
+        .{
+            .in = "42 + 63 * 9",
+            .expect_out = (
+                \\BinaryExpr:
+                \\  NumberExpr(42)
+                \\  op(add)
+                \\  BinaryExpr:
+                \\    NumberExpr(63)
+                \\    op(multiply)
+                \\    NumberExpr(9)
+                \\
+            ),
+        },
     }) |case| {
         var parser = Parser.init(arena.allocator(), case.in);
 

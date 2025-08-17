@@ -83,6 +83,8 @@ pub const Token = union(TokenTag) {
         switch (str[0]) {
             '+' => return .add,
             '-' => return .subtract,
+            '*' => return .multiply,
+            '/' => return .divide,
             '=' => {
                 if (str.len == 1) return .equal;
                 if (str.len == 2 and str[1] == '=') return .equal_equal;
@@ -185,7 +187,7 @@ pub const TokenIter = struct {
                             self.state = .commentUntilNewLine;
                             continue;
                         },
-                        '+', '-', '=', '!', '<', '>' => {
+                        '+', '-', '*', '/', '=', '!', '<', '>' => {
                             strStart = self.index;
                             self.state = .startsWithOperator;
                             continue;
