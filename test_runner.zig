@@ -32,6 +32,9 @@ pub fn main() !void {
             _ = try stdout_writer.interface.write("[fail]");
             _ = try stdout_writer.interface.write(DEFAULT_COLOR);
             try stdout_writer.interface.print(" {s}: {}\n", .{ t.name, err });
+            if (@errorReturnTrace()) |st| {
+                try st.format(&stdout_writer.interface);
+            }
             continue;
         };
         try stdout.lock(.exclusive);
