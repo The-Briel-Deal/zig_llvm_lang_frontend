@@ -64,7 +64,7 @@ const Parser = struct {
                 rhs = try self.parseBinOpRHS(tok_prec + 1, rhs);
             }
 
-            lhs = try ExprAST.create(&self.allocator, .{
+            lhs = try ExprAST.create(self.allocator, .{
                 .binary = try .init(bin_op, lhs, rhs),
             });
         }
@@ -73,7 +73,7 @@ const Parser = struct {
     fn parseNumber(self: *Parser) !*ExprAST {
         const result = try switch (self.curr) {
             .number => |val| ExprAST.create(
-                &self.allocator,
+                self.allocator,
                 .{ .number = .init(val) },
             ),
             else => Error.WrongTokenType,
@@ -119,11 +119,11 @@ const Parser = struct {
                 // Consume ')'
                 assert(self.curr == TokenTag.close_paren);
                 _ = try self.next();
-                return ExprAST.create(&self.allocator, .{ .call = .init(name, args.items) });
+                return ExprAST.create(self.allocator, .{ .call = .init(name, args.items) });
             },
             else => {
                 return ExprAST.create(
-                    &self.allocator,
+                    self.allocator,
                     .{ .variable = .init(name) },
                 );
             },

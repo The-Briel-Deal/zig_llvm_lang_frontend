@@ -16,7 +16,7 @@ pub const ExprAST = struct {
         return std.meta.activeTag(self.type);
     }
 
-    pub fn create(allocator: *std.mem.Allocator, expr_type: Type) AllocError!*ExprAST {
+    pub fn create(allocator: std.mem.Allocator, expr_type: Type) AllocError!*ExprAST {
         var expr = try allocator.create(ExprAST);
         expr.type = expr_type;
 
@@ -73,6 +73,41 @@ pub const ExprAST = struct {
     };
 
     type: Type,
+    fn printIndent(writer: *std.io.Writer, depth: u32) !void {
+        for (0..depth) |_|
+            try writer.print("  ", .{});
+    }
+
+    pub fn printNode(self: *ExprAST, writer: *std.Io.Writer, depth: u32) !void {
+        switch (self.type) {
+            .binary => |val| {
+                try printIndent(writer, depth);
+                try writer.print("BinaryExpr:\n", .{});
+
+                try val.lhs.printNode(writer, depth + 1);
+
+                try printIndent(writer, depth + 1);
+                try writer.print("op({s}):\n", .{@tagName(val.op)});
+
+                try val.rhs.printNode(writer, depth + 1);
+            },
+            .number => |val| {
+                try printIndent(writer, depth);
+                try writer.print("NumberExpr({d})\n", .{val.val});
+            },
+            .variable => |val| {
+                try printIndent(writer, depth);
+                try writer.print("VariableExpr({s})\n", .{val.name});
+            },
+            .call => |val| {
+                try printIndent(writer, depth);
+                try writer.print("CallExpr: {s}(\n", .{val.callee});
+                for (val.args) |arg| {
+                    try arg.printNode(writer, depth + 1);
+                }
+            },
+        }
+    }
 };
 
 /// Represents the interface of a function.
@@ -98,11 +133,69 @@ const FunctionAST = struct {
     }
 };
 
-test "Create FunctionAST" {
+test "FunctionAST.init()" {
     const function: FunctionAST = .init(
         &.{ .name = "foo", .args = &.{ "boogie", "woogie" } },
         &.{ .type = .{ .number = .{ .val = 42.63 } } },
     );
 
     try std.testing.expectEqualStrings("foo", function.proto.getName());
+}
+
+test "ExprAST.printNode()" {
+    var gpa: std.heap.DebugAllocator(.{}) = .init;
+
+    const TestCase = struct {
+        case: *ExprAST,
+        expect: []const u8,
+    };
+
+    const cases = [_]TestCase{
+        .{
+            .case = try ExprAST.create(
+                gpa.allocator(),
+                .{
+                    .number = .init(46),
+                },
+            ),
+            .expect = (
+                \\NumberExpr(46)
+                \\
+            ),
+        },
+        .{
+            .case = try ExprAST.create(
+                gpa.allocator(),
+                .{
+                    .binary = try .init(
+                        .add,
+                        try ExprAST.create(
+                            gpa.allocator(),
+                            .{
+                                .number = .init(46),
+                            },
+                        ),
+                        try ExprAST.create(
+                            gpa.allocator(),
+                            .{
+                                .number = .init(102),
+                            },
+                        ),
+                    ),
+                },
+            ),
+            .expect = (
+                \\BinaryExpr:
+                \\  NumberExpr(46)
+                \\  op(add):
+                \\  NumberExpr(102)
+                \\
+            ),
+        },
+    };
+    for (cases) |case| {
+        var writer: std.Io.Writer.Allocating = .init(gpa.allocator());
+        try case.case.printNode(&writer.writer, 0);
+        try std.testing.expectEqualStrings(case.expect, writer.written());
+    }
 }
