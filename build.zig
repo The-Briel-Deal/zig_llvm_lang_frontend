@@ -41,12 +41,16 @@ pub fn build(b: *std.Build) void {
     };
 
     const exe_tests = b.addTest(.{
+        .name = "exe_tests",
         .root_module = exe.root_module,
         .test_runner = test_runner,
+        .use_llvm = true,
     });
     const zllf_tests = b.addTest(.{
+        .name = "zllf_tests",
         .root_module = zllf_mod,
         .test_runner = test_runner,
+        .use_llvm = true,
     });
 
     const enable_debug_logs = b.option(bool, "enable_debug_logs", "enable debug logging") orelse false;
@@ -62,4 +66,11 @@ pub fn build(b: *std.Build) void {
     const test_step = b.step("test", "Run tests");
     test_step.dependOn(&run_exe_tests.step);
     test_step.dependOn(&run_zllf_tests.step);
+    
+    b.installArtifact(exe_tests);
+    b.installArtifact(zllf_tests);
+    const build_test_step = b.step("build_test", "Build tests");
+    build_test_step.dependOn(&exe_tests.step);
+    build_test_step.dependOn(&zllf_tests.step);
+
 }
