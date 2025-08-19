@@ -75,4 +75,12 @@ pub fn build(b: *std.Build) void {
     const build_test_step = b.step("build_test", "Build tests");
     build_test_step.dependOn(&zllf_install_artifact.step);
     build_test_step.dependOn(&exe_install_artifact.step);
+
+    const gdb = b.addSystemCommand(&.{
+        "gdb",
+    });
+
+    gdb.addArtifactArg(zllf_tests);
+    const dbg_test = b.step("dbg_test", "Run tests under gdb");
+    dbg_test.dependOn(&gdb.step);
 }
