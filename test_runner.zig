@@ -8,41 +8,38 @@ const BRIGHT_GREEN_FOREGROUND = "\x1b[92m";
 const BRIGHT_YELLOW_FOREGROUND = "\x1b[93m";
 const BRIGHT_RED_FOREGROUND = "\x1b[101m";
 
-var allocating_writer: std.Io.Writer.Allocating = undefined;
+var test_logs_arr: std.ArrayList(u8) = undefined;
 
 pub fn main() !void {
     var gpa = std.heap.DebugAllocator(.{}).init;
     for (builtin.test_functions) |t| {
-        var buf: [64]u8 = undefined;
-        var stdout = std.fs.File.stdout();
-        var stdout_writer = stdout.writer(&buf);
-        allocating_writer = .init(gpa.allocator());
+        var stdout = std.io.getStdOut();
+        var stdout_writer = stdout.writer();
+        test_logs_arr = .init(gpa.allocator());
         defer {
-            var test_logs = allocating_writer.toArrayList();
-            stdout_writer.interface.print("{s}", .{test_logs.items}) catch
+            stdout_writer.print("{s}", .{test_logs_arr.items}) catch
                 @panic("Writing logs to stdout failed!");
-            stdout_writer.interface.flush() catch @panic("Flushing to stdout failed");
-            test_logs.clearAndFree(gpa.allocator());
+            test_logs_arr.clearAndFree();
         }
 
         t.func() catch |err| {
             try stdout.lock(.exclusive);
             defer stdout.unlock();
-            _ = try stdout_writer.interface.write(BRIGHT_RED_FOREGROUND);
-            _ = try stdout_writer.interface.write("[fail]");
-            _ = try stdout_writer.interface.write(DEFAULT_COLOR);
-            try stdout_writer.interface.print(" {s}: {}\n", .{ t.name, err });
+            _ = try stdout_writer.write(BRIGHT_RED_FOREGROUND);
+            _ = try stdout_writer.write("[fail]");
+            _ = try stdout_writer.write(DEFAULT_COLOR);
+            try stdout_writer.print(" {s}: {}\n", .{ t.name, err });
             if (@errorReturnTrace()) |st| {
-                try st.format(&stdout_writer.interface);
+                try st.format("", .{}, &stdout_writer);
             }
             continue;
         };
         try stdout.lock(.exclusive);
         defer stdout.unlock();
-        _ = try stdout_writer.interface.write(BRIGHT_GREEN_FOREGROUND);
-        _ = try stdout_writer.interface.write("[pass]");
-        _ = try stdout_writer.interface.write(DEFAULT_COLOR);
-        try stdout_writer.interface.print(" {s}\n", .{t.name});
+        _ = try stdout_writer.write(BRIGHT_GREEN_FOREGROUND);
+        _ = try stdout_writer.write("[pass]");
+        _ = try stdout_writer.write(DEFAULT_COLOR);
+        try stdout_writer.print(" {s}\n", .{t.name});
     }
 }
 
@@ -52,7 +49,7 @@ fn logHandler(
     comptime format: []const u8,
     args: anytype,
 ) void {
-    var writer = &allocating_writer.writer;
+    var writer = &test_logs_arr.writer();
 
     _ = writer.write("  ") catch return;
     _ = writer.write(BRIGHT_YELLOW_FOREGROUND) catch return;

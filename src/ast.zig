@@ -74,12 +74,12 @@ pub const ExprAST = struct {
     };
 
     type: Type,
-    fn printIndent(writer: *std.io.Writer, depth: u32) !void {
+    fn printIndent(writer: anytype, depth: u32) !void {
         for (0..depth) |_|
             try writer.print("  ", .{});
     }
 
-    pub fn printNode(self: *const ExprAST, writer: *std.Io.Writer, depth: u32) !void {
+    pub fn printNode(self: *const ExprAST, writer: anytype, depth: u32) !void {
         switch (self.type) {
             .binary => |val| {
                 try printIndent(writer, depth);
@@ -112,9 +112,12 @@ pub const ExprAST = struct {
     pub fn expect(self: *const ExprAST, comptime expected: []const u8) !void {
         var buffer: [expected.len * 2]u8 = undefined;
 
-        var writer: std.Io.Writer = .fixed(&buffer);
+        var fixed_allocator = std.heap.FixedBufferAllocator.init(&buffer);
+        var arr = std.ArrayList(u8).initCapacity(fixed_allocator.allocator(), buffer.len) catch unreachable;
+        var writer = arr.writer();
+
         try self.printNode(&writer, 0);
-        try std.testing.expectEqualStrings(expected, buffer[0..writer.end]);
+        try std.testing.expectEqualStrings(expected, buffer[0..writer.context.items.len]);
     }
 };
 

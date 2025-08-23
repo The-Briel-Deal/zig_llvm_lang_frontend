@@ -103,7 +103,7 @@ const Parser = struct {
         switch (self.curr) {
             .open_paren => {
                 _ = try self.next(); // Consume '('
-                var args: std.ArrayList(*ExprAST) = .empty;
+                var args: std.ArrayListUnmanaged(*ExprAST) = .empty;
                 while (true) {
                     const arg = try self.parseExpr();
                     try args.append(self.allocator, arg);
